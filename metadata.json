@@ -1,0 +1,7 @@
+{
+  "name": "OMG it's DDL!",
+  "description": "A survival game where you control a student racing against the Deadline using your nose/head movement via webcam. Balance vitality and progress to survive.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

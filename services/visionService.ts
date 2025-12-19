@@ -15,17 +15,16 @@ export async function initializeFaceLandmarker() {
       "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.18/wasm"
     );
     
-    // We use default options to allow the library to automatically select the best delegate.
-    // This avoids forcing GPU on incompatible devices or forcing CPU when GPU is available.
-    // Note: "INFO: Created TensorFlow Lite XNNPACK delegate for CPU" is a standard status log, not an error.
     faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
       baseOptions: {
         modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+        delegate: "CPU"
       },
       outputFaceBlendshapes: false,
       runningMode: "VIDEO",
       numFaces: 1
     });
+
     console.log("FaceLandmarker initialized successfully");
 
   } catch (error) {

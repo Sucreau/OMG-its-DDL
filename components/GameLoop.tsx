@@ -29,6 +29,12 @@ const GameLoop: React.FC<GameLoopProps> = ({ onGameOver, bgmUrl, isMusicOn, musi
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   
+  // UI Direct Refs (For high performance updates bypassing React state)
+  const vitalityBarRef = useRef<HTMLDivElement>(null);
+  const vitalityTextRef = useRef<HTMLSpanElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const progressTextRef = useRef<HTMLSpanElement>(null);
+  
   // Audio Refs (For SFX only now)
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -521,6 +527,27 @@ const GameLoop: React.FC<GameLoopProps> = ({ onGameOver, bgmUrl, isMusicOn, musi
       player.progress = Math.max(0, Math.min(100, player.progress));
     }
 
+    // --- DIRECT DOM UPDATES (Fix for React render lag) ---
+    // Instead of relying on setUiPlayer state update which might be batched/throttled by React,
+    // we update the vital visual elements directly.
+    if (vitalityBarRef.current && !isWarmup) {
+       const v = Math.max(0, Math.min(100, player.vitality));
+       const hue = Math.round(v * 1.2);
+       vitalityBarRef.current.style.width = `${v}%`;
+       vitalityBarRef.current.style.backgroundColor = `hsl(${hue}, 90%, 50%)`;
+    }
+    if (vitalityTextRef.current && !isWarmup) {
+       vitalityTextRef.current.innerText = `${Math.round(player.vitality)}%`;
+    }
+    if (progressBarRef.current && !isWarmup) {
+       const p = Math.max(0, Math.min(100, player.progress));
+       progressBarRef.current.style.width = `${p}%`;
+    }
+    if (progressTextRef.current && !isWarmup) {
+      progressTextRef.current.innerText = `${Math.round(player.progress)}%`;
+    }
+
+
     // Spawn
     spawnTimerRef.current += dt;
     const spawnInterval = phase === GamePhase.NIGHT ? 0.8 : (phase === GamePhase.DUSK ? 1.5 : 2.0);
@@ -595,7 +622,9 @@ const GameLoop: React.FC<GameLoopProps> = ({ onGameOver, bgmUrl, isMusicOn, musi
     return 'bg-black/40';
   };
 
-  const vitalityHue = Math.max(0, Math.min(120, uiPlayer.vitality * 1.2));
+  // Initial render calculations (React state acts as fallback/initial value)
+  const vitalityPercent = Math.max(0, Math.min(100, uiPlayer.vitality));
+  const vitalityHue = Math.round(vitalityPercent * 1.2); 
   const isLowVitality = uiPlayer.vitality < 30;
 
   return (
@@ -663,18 +692,19 @@ const GameLoop: React.FC<GameLoopProps> = ({ onGameOver, bgmUrl, isMusicOn, musi
 
       {/* UI Header */}
       <div className="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-50">
-        <div className="flex flex-col gap-2 w-1/3">
+        <div className="flex flex-col gap-2 w-1/2 md:w-1/3">
           {/* Vitality Bar */}
           <div className={`bg-white/80 p-2 rounded-lg shadow border backdrop-blur-sm transition-all duration-200 ${isLowVitality ? 'border-red-500 shake-anim bg-red-50/90' : 'border-gray-200'}`}>
             <div className="text-xs font-bold text-gray-600 mb-1 flex justify-between">
               <span className={isLowVitality ? "text-red-600 font-black" : ""}>活力 (Vitality)</span>
-              <span className={isLowVitality ? "text-red-600 font-black" : ""}>{Math.round(uiPlayer.vitality)}%</span>
+              <span ref={vitalityTextRef} className={isLowVitality ? "text-red-600 font-black" : ""}>{Math.round(uiPlayer.vitality)}%</span>
             </div>
             <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden border border-gray-300/50">
               <div 
-                className="h-full transition-all duration-300 ease-out" 
+                ref={vitalityBarRef}
+                className="h-full ease-out" 
                 style={{ 
-                  width: `${uiPlayer.vitality}%`,
+                  width: `${vitalityPercent}%`,
                   backgroundColor: `hsl(${vitalityHue}, 90%, 50%)`
                 }}
               />
@@ -685,12 +715,13 @@ const GameLoop: React.FC<GameLoopProps> = ({ onGameOver, bgmUrl, isMusicOn, musi
           <div className="bg-white/80 p-2 rounded-lg shadow border border-gray-200 backdrop-blur-sm">
             <div className="text-xs font-bold text-gray-600 mb-1 flex justify-between">
               <span>作业完成度 (Done)</span>
-              <span>{Math.round(uiPlayer.progress)}%</span>
+              <span ref={progressTextRef}>{Math.round(uiPlayer.progress)}%</span>
             </div>
             <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-blue-600 transition-all duration-300" 
-                style={{ width: `${uiPlayer.progress}%` }}
+                ref={progressBarRef}
+                className="h-full bg-blue-600"
+                style={{ width: `${Math.min(100, Math.max(0, uiPlayer.progress))}%` }}
               />
             </div>
           </div>
